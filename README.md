@@ -232,6 +232,7 @@ A2A_MCP_URL=https://mcp-a2a-bridge.onrender.com
 - Connected and tested voice-to-order via Vapi end-to-end
 - Created architecture diagram + sample output JSON
 ---
-##MIT Licensed • Built with ❤️ by Team Nexus Agent
+
+***MIT Licensed • Built with ❤️ by Team Nexus Agent***
 
 
