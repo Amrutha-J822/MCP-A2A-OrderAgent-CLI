@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="docs/logo.png" alt="Nexus Agent" width="200"/>
+  <img src="images/architecture.png" alt="Architecture Diagram" width="600"/>
 </p>
 
 # 🚀 Nexus Agent  
 ### *Multi-Agent Orchestration via MCP & A2A*  
-**Top 6 of 57** @ **MCP & A2A Hackathon – AWS Edition** • Creators Corner @ AWS GenAI Loft, SF  
+**Top 6 of 57 ** @ **MCP & A2A Hackathon – AWS Edition** • Creators Corner @ AWS GenAI Loft, SF  
 
 [![Hackathon Finalists!](https://img.shields.io/badge/Top%206-in%2057-orange.svg)](https://lnkd.in/gMKTiyKu)  
 [![FastAPI](https://img.shields.io/badge/FastAPI-%5E0.95-green.svg)](https://fastapi.tiangolo.com/)  
@@ -15,25 +15,24 @@
 
 ## 🎯 Project Overview
 
-**Nexus Agent** is a cloud-ops automation platform where multiple AI agents collaborate—like a human team—to manage EC2 instances, create JIRA tickets, query RDS order data, and more, all via natural language.
+**Nexus Agent** is a conversational cloud-ops platform where multiple AI agents collaborate—like a human team—via the Agent-to-Agent (A2A) protocol and Model Context Protocol (MCP). Users can:
 
-- 🔄 **Agent-to-Agent Workflow** via Model Context Protocol (MCP) & Agent-to-Agent (A2A) bridge  
-- ☁️ **AWS Automation**: spin up/down EC2, snapshot backups  
-- 🗂️ **Ticketing Integration**: automated JIRA workflows  
-- 📊 **Data Queries**: fetch, filter & analyze RDS records  
-- 🔍 **IDE-like Observability**: real-time tracing & debugging of agent decisions  
+- 🔄 **Delegate workflows** through an A2A/MCP bridge  
+- ☁️ **Automate AWS**: launch/terminate EC2, snapshot volumes  
+- 🗂️ **Manage Tickets**: create and update JIRA issues  
+- 📊 **Query Data**: fetch and filter RDS order records  
+- 🔍 **Observe & Debug**: trace agent decisions in real time  
 
 ---
 
 ## 🏆 Hackathon Highlights
 
 - **Event**: MCP & A2A Hackathon – AWS Edition  
-- **Hosts**: Creators Corner @ AWS GenAI Loft  
+- **Host**: Creators Corner @ AWS GenAI Loft  
 - **Team Nexus Agent**  
-  - **Amrutha Junnuri**
-  - Chandini Saisri Uppuganti   
+  - **Amrutha Junnuri** (You!)  
+  - Chandini Saisri Uppuganti  
   - Kiran  
-
 > “Nexus Agent pushed the boundaries of multi-agent orchestration—automating cloud operations, ticketing, and data retrieval in a single, conversational UX.”  
 
 📄 Devpost: [bit.ly/devpost-m2](https://lnkd.in/gMKTiyKu)  
@@ -41,18 +40,34 @@
 
 ---
 
-## 📐 Architecture & Workflow
+## 🏗️ Architecture & Workflow
 
-```mermaid
-flowchart LR
-  U[User<br/>(Voice / Text)] -->|“Create EC2 t2.micro”| API[FastAPI “/ask”]
-  subgraph API Service
-    API --> A2AClient[MCP–A2A Client]
-    A2AClient -->|POST /a2a_send_task| Bridge[MCP–A2A Bridge]
-    Bridge -->|LLM Orchestration| LLM[(Perplexity → Vapi → Mistral)]
-    LLM -->|result JSON| Bridge
-    Bridge -->|POST /a2a_get_task| A2AClient
-    A2AClient -->|Executes Tool Calls| Tools{AWS | JIRA | RDS}
-    Tools -->|Responses| API
-    API -->|JSON / Audio| UI[Browser UI & Speech]
-  end
+1️⃣ **Client** (Browser UI & Speech)  
+2️⃣ **FastAPI** `/ask` endpoint  
+3️⃣ **A2A Client** (MCP–A2A SDK in Python)  
+4️⃣ **Bridge** (Node MCP‐A2A server on Render)  
+5️⃣ **LLM Orchestration** (Perplexity → Vapi → Mistral)  
+6️⃣ **Tools** (AWS, JIRA, RDS)  
+7️⃣ **Response** back to UI via JSON (or audio in voice mode)
+
+<p align="center">
+  <img src="images/architecture.png" alt="Architecture Diagram" width="600"/>
+</p>
+
+---
+
+## 🛠️ Sample Interaction
+
+Type or speak:  
+> “What is the status of Alva Halajian order?”
+
+<p align="center">
+  <img src="images/output1.jpg" alt="Sample Output" width="600"/>
+</p>
+
+Backend JSON response:
+```json
+{
+  "customer": "Alva Halajian",
+  "order_status": "COMPLETE"
+}
