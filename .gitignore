@@ -16,3 +16,4 @@ env/
 *.pyo
 *.pyd
 "@ | Set-Content .gitignore
+/mcp-a2a/.env
