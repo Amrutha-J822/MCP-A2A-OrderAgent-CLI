@@ -95,7 +95,9 @@ Get cloud advice via LLMs with fallback (Perplexity → Mistral).
 <p align="center">
   <img src="images/output1.jpg" alt="Ouput" width="600"/>
 </p>
+
 ---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
