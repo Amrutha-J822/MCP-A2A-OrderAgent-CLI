@@ -37,7 +37,7 @@
 - **Event**: MCP & A2A Hackathon – AWS Edition  
 - **Host**: Creators Corner @ AWS GenAI Loft  
 - **Team Nexus Agent**  
-  - **Amrutha Junnuri** (You!)  
+  - **Amrutha Junnuri** 
   - Chandini Saisri Uppuganti  
   - Kiran  
 > “Nexus Agent pushed the boundaries of multi-agent orchestration—automating cloud operations, ticketing, and data retrieval in a single, conversational UX.”  
@@ -62,7 +62,6 @@
 </p>
 
 ---
-
 ## 🧩 Components
 
 ### 1. AWS EC2 Manager  
@@ -91,7 +90,12 @@ Simulate ticket creation, comments, and status updates.
 Get cloud advice via LLMs with fallback (Perplexity → Mistral).
 
 ---
+## ✅ Output:
 
+<p align="center">
+  <img src="images/output1.jpg" alt="Ouput" width="600"/>
+</p>
+---
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -100,7 +104,7 @@ Get cloud advice via LLMs with fallback (Perplexity → Mistral).
 - AWS account with EC2 permissions  
 - PostgreSQL instance (RDS)  
 - Perplexity API Key  
-- Vapi.ai API Key  
+- Vapi.ai API Key
 
 ### Environment Setup
 
