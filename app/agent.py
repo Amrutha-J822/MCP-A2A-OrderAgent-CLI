@@ -2,17 +2,38 @@
 
 import os
 import re
+import json
 import psycopg2
 import requests
+from psycopg2 import sql
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# URL of your MCP-A2A bridge
-A2A_MCP_URL = os.getenv("A2A_MCP_URL")
+# URL of your MCP-A2A bridge on Render
+A2A_MCP_URL = os.getenv("A2A_MCP_URL").rstrip("/")
 
-# Your Perplexity API key for the fallback
+# Perplexity API key (fallback extraction)
 PERP_KEY = os.getenv("PERPLEXITY_API_KEY")
+
+# Fallback map from user phrasing → actual DB column
+COLUMN_MAP = {
+    "full name":      "full_name",
+    "address":        "address",
+    "age":            "age",
+    "gender":         "gender",
+    "latitude":       "latitude",
+    "longitude":      "longitude",
+    "email address":  "email_address",
+    "order datetime": "order_datetime",
+    "order status":   "order_status",
+    "order total":    "order_total",
+    "items":          "items",
+    "total sales":    "total_sales",
+    "order count":    "order_count",
+    "rating":         "rating",
+    "average rating": "average_rating"
+}
 
 
 def get_connection():
@@ -46,68 +67,77 @@ def get_a2a_result(task_id: str) -> dict:
 
 
 async def process_user_query(user_query: str):
-    # 1) Regex quick-path: "status of X order"
-    m = re.search(r"status of\s+(.+?)\s+order", user_query, re.IGNORECASE)
-    if m:
-        customer_name = m.group(1).strip()
-    else:
-        # 2) Try MCP-A2A bridge → Perplexity under the hood
-        try:
-            a2a = send_a2a_task(user_query)
-            tid = a2a["taskId"]
-            result = get_a2a_result(tid)
-            customer_name = result.get("customer_name", "").strip()
-            if not customer_name:
-                raise ValueError("empty name from bridge")
-        except Exception:
-            # 2b) Fallback: direct Perplexity call with Mistral
-            try:
-                headers = {
-                    "Authorization": f"Bearer {PERP_KEY}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "model": "mistral-7b-instruct",
-                    "messages": [
-                        {"role": "system", "content": "Extract the customer's full name from this query."},
-                        {"role": "user",   "content": user_query}
-                    ]
-                }
-                resp = requests.post(
-                    "https://api.perplexity.ai/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=10
-                )
-                resp.raise_for_status()
-                customer_name = resp.json()["choices"][0]["message"]["content"].strip()
-            except Exception as e:
-                return {"error": f"Name extraction failed (bridge & mistral): {e}"}
+    # --- Step 1: Extract name + field via MCP-A2A (preferred) ---
+    try:
+        prompt = (
+            "Extract exactly two things from this request:\n"
+            "1) customer_name (the customer's full name)\n"
+            "2) column (one of these fields: "
+            + ", ".join(COLUMN_MAP.keys())
+            + ")\n"
+            "Return a JSON object with keys "
+            "\"customer_name\" and \"column\".\n"
+            f"User: {user_query}"
+        )
+        a2a = send_a2a_task(prompt)
+        tid = a2a["taskId"]
+        out = get_a2a_result(tid).get("response") or get_a2a_result(tid).get("content") or get_a2a_result(tid)
+        # normalize to string
+        raw = out if isinstance(out, str) else json.dumps(out)
+        params = json.loads(raw)
+        customer_name = params["customer_name"].strip()
+        column_key   = params["column"].strip().lower()
+        column       = COLUMN_MAP.get(column_key, None)
+        if not column:
+            raise KeyError(f"Unknown column '{column_key}'")
+    except Exception:
+        # --- Step 2: Fallback parsing ---
+        # a) name via regex
+        m = re.search(r"status of\s+(.+?)\s+order", user_query, re.IGNORECASE)
+        if m:
+            customer_name = m.group(1).strip()
+        else:
+            # last-ditch: take first two words as name
+            customer_name = " ".join(user_query.split()[:2])
+        # b) field via keyword map
+        uq = user_query.lower()
+        column = None
+        # longest keys first
+        for phrase in sorted(COLUMN_MAP, key=len, reverse=True):
+            if phrase in uq:
+                column = COLUMN_MAP[phrase]
+                break
+        # default to order_status
+        if not column:
+            column = "order_status"
 
-    # 3) Now query your RDS for that customer’s latest order
+    # --- Step 3: Query your RDS dynamically ---
     try:
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT order_status, order_datetime, order_total
-            FROM customer_orders
-            WHERE full_name ILIKE %s
-            ORDER BY order_datetime DESC
-            LIMIT 1
-        """, (f"%{customer_name}%",))
+        q = sql.SQL("SELECT {col} FROM customer_orders "
+                    "WHERE full_name ILIKE %s "
+                    "ORDER BY order_datetime DESC "
+                    "LIMIT 1").format(
+            col=sql.Identifier(column)
+        )
+        cur.execute(q, (f"%{customer_name}%",))
         row = cur.fetchone()
         cur.close()
         conn.close()
     except Exception as e:
         return {"error": f"Database error: {e}"}
 
-    # 4) Build the response
+    # --- Step 4: Build response ---
     if not row:
-        return {"message": f"No orders found for {customer_name}"}
+        return {"message": f"No {column} found for {customer_name}"}
+
+    value = row[0]
+    # if datetime, format
+    if hasattr(value, "strftime"):
+        value = value.strftime("%Y-%m-%d %H:%M:%S")
 
     return {
-        "customer":     customer_name,
-        "order_status": row[0],
-        "order_date":   row[1].strftime("%Y-%m-%d %H:%M:%S"),
-        "order_total":  float(row[2]) if row[2] is not None else None
+        "customer": customer_name,
+        column: value
     }
