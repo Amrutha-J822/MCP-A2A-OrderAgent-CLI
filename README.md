@@ -63,23 +63,6 @@
 
 ---
 
-## 🛠️ Sample Interaction
-
-Type or speak:  
-> “What is the status of Alva Halajian order?”
-
-<p align="center">
-  <img src="images/output1.jpg" alt="Sample Output" width="600"/>
-</p>
-
-Backend JSON response:
-```json
-{
-  "customer": "Alva Halajian",
-  "order_status": "COMPLETE"
-}
----
-
 ## 🧩 Components
 
 ### 1. AWS EC2 Manager  
@@ -121,7 +104,128 @@ Get cloud advice via LLMs with fallback (Perplexity → Mistral).
 
 ### Environment Setup
 
-1. Clone the repo:
+#### 1. Clone the repo:
 ```bash
 git clone https://github.com/Amrutha-J822/MCP-A2A-OrderAgent-CLI.git
 cd MCP-A2A-OrderAgent-CLI
+
+```
+---
+
+#### 2. Create .env with:
+```
+# RDS / PostgreSQL
+DB_HOST=...
+DB_PORT=5432
+DB_NAME=...
+DB_USER=...
+DB_PASSWORD=...
+
+# AWS EC2
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=...
+
+# LLM & Voice
+PERPLEXITY_API_KEY=...
+VAPI_API_KEY=...
+
+# MCP–A2A bridge (Render)
+A2A_MCP_URL=https://mcp-a2a-bridge.onrender.com
+
+```
+#### 3. Create .env with:
+```
+pip install -r requirements.txt
+
+```
+#### 4. Deploy the bridge (in /mcp-a2a) separately on Render with:
+```
+A2A_ENDPOINT_URL=https://<your-api>.onrender.com/vapi-webhook
+
+```
+---
+
+## 💻 Running Locally
+
+### FastAPI Server:
+```
+uvicorn app.main:app --reload
+
+```
+- /ask: for text queries
+- /vapi-webhook: for voice from Vapi
+---
+
+## 🖇️Using the A2A Client
+#### 1. Clone the A2A SDK:
+```
+git clone https://github.com/google/A2A.git mcp-a2a
+
+```
+#### 2. Run the A2A bridge:
+```
+cd mcp-a2a
+npm install
+npm start
+
+```
+#### 3. Ensure your .env or Render environment has:
+```
+A2A_MCP_URL=https://mcp-a2a-bridge.onrender.com
+```
+---
+## Project Structure
+```
+├── api/                     # Optional Lambda-style endpoints
+├── app/
+│   ├── agent.py             # Main processing logic
+│   ├── events.py            # Amazon Events ingestion
+│   ├── main.py              # FastAPI setup
+│   └── voice.py             # Vapi.ai voice handler
+├── data/
+│   └── customer_orders.csv.xlsx
+├── mcp-a2a/                 # MCP-A2A bridge (NodeJS)
+│   ├── package.json
+│   └── index.ts
+├── images/
+│   ├── architecture.png
+│   └── output1.jpg
+├── requirements.txt
+└── .env
+```
+---
+## 🖼️ Sample Interaction
+
+```
+“What is the status of Alva Halajian order?”
+
+<p align="center"> <img src="images/output1.jpg" alt="Sample Output" width="600"/> </p>
+```
+
+```
+{
+  "customer": "Alva Halajian",
+  "order_status": "COMPLETE"
+}
+```
+---
+## 📚 Resources
+
+- [A2A Protocol Repository](https://github.com/google/A2A)
+- [OpenAI Agents Documentation](https://platform.openai.com/docs/assistants/overview)
+- [MCP Protocol Documentation](https://github.com/microsoft/mcp)
+- [Vapi ](https://docs.vapi.ai/sdk/mcp-server)
+---
+## 🙋🏼‍♀️ My Contribution
+- Architected the full A2A → MCP → RDS pipeline
+- Built the FastAPI backend with /ask and /vapi-webhook endpoints
+- Integrated Perplexity, Vapi.ai, and Mistral for field extraction
+- Deployed MCP-A2A bridge + FastAPI app to Render
+- Added dynamic SQL mapping logic for field detection
+- Connected and tested voice-to-order via Vapi end-to-end
+- Created architecture diagram + sample output JSON
+---
+##MIT Licensed • Built with ❤️ by Team Nexus Agent
+
+
