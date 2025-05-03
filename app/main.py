@@ -18,7 +18,8 @@ input{width:300px;padding:8px;}button{padding:8px 12px;margin-left:4px;}
 #mic{cursor:pointer;vertical-align:middle;}#status{margin-top:8px;color:gray;}
 #response{margin-top:1em;background:#f4f4f4;padding:1em;white-space:pre-wrap;}
 </style></head><body>
-  <h2>Ask anything about a customer (e.g. “What is the order total of Jane Doe?”)</h2>
+  <!-- example removed here -->
+  <h2>Ask anything about a customer</h2>
   <div>
     <input id="query" type="text" placeholder="eg: What is Alice Johnson’s average rating?"/>
     <button id="askBtn">Ask</button>
@@ -50,16 +51,17 @@ if(!SR) M.style.display='none'; else {
       iconOn='https://img.icons8.com/ios-filled/24/000000/microphone.png',
       iconOff='https://img.icons8.com/ios-filled/24/ff0000/stop.png';
   M.src=iconOn; r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;
-  M.onclick=()=>{
-    if(!listening){listening=true;M.src=iconOff;S.textContent='🎙 Listening…';r.start()}
-    else r.stop();
+  M.onclick=()=>{ if(!listening){
+      listening=true;M.src=iconOff;S.textContent='🎙 Listening…';r.start()
+    } else r.stop();
   };
   r.onresult=e=>{
     let t=e.results[0][0].transcript;
     S.textContent=`🎙 You said: "${t}"`; I.value=t;
   };
   r.onend=_=>{
-    if(listening){listening=false;M.src=iconOn;S.textContent='⏸️ Stopped';
+    if(listening){
+      listening=false;M.src=iconOn;S.textContent='⏸️ Stopped';
       let v=I.value.trim(); if(v) sendQ(v)
     }
   };
@@ -67,7 +69,7 @@ if(!SR) M.style.display='none'; else {
 }
 </script>
 </body></html>
-"""
+    """
 
 @app.post("/ask")
 async def ask_agent(request: Request):
