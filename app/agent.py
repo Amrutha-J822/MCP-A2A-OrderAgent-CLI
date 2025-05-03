@@ -1,3 +1,5 @@
+# app/agent.py
+
 import os
 import re
 import psycopg2
@@ -6,7 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# URL of your locally running MCP-A2A bridge (set this in your root .env)
 A2A_MCP_URL = os.getenv("A2A_MCP_URL")
 
 def get_connection():
@@ -19,7 +20,6 @@ def get_connection():
     )
 
 def send_a2a_task(message: str) -> dict:
-    """Send the raw user query to the A2A bridge."""
     resp = requests.post(
         f"{A2A_MCP_URL}/v1/tools/a2a_send_task",
         headers={"Content-Type": "application/json"},
@@ -29,7 +29,6 @@ def send_a2a_task(message: str) -> dict:
     return resp.json()
 
 def get_a2a_result(task_id: str) -> dict:
-    """Poll the bridge for the completed task result."""
     resp = requests.post(
         f"{A2A_MCP_URL}/v1/tools/a2a_get_task",
         headers={"Content-Type": "application/json"},
@@ -39,17 +38,16 @@ def get_a2a_result(task_id: str) -> dict:
     return resp.json()
 
 async def process_user_query(user_query: str):
-    # 1) Try a simple regex first: "status of X order"
+    # 1) Try regex: "status of X order"
     match = re.search(r"status of\s+(.+?)\s+order", user_query, re.IGNORECASE)
     if match:
         customer_name = match.group(1).strip()
     else:
-        # 2) Otherwise, send the query through your mcp-a2a bridge
+        # 2) Fallback to MCP-A2A bridge name extraction
         try:
             a2a_resp = send_a2a_task(user_query)
             task_id  = a2a_resp["taskId"]
             result   = get_a2a_result(task_id)
-            # Expecting your A2A agent to return { "customer_name": "Name" }
             customer_name = result.get("customer_name", "").strip()
             if not customer_name:
                 raise ValueError("Empty customer_name from A2A result")
@@ -61,25 +59,24 @@ async def process_user_query(user_query: str):
         conn = get_connection()
         cur  = conn.cursor()
         cur.execute("""
-            SELECT order_status, order_datetime, order_total
+            SELECT order_status, order_datetime
             FROM customer_orders
-            WHERE customer_name ILIKE %s
+            WHERE full_name ILIKE %s
             ORDER BY order_datetime DESC
             LIMIT 1
-        """, (f"%{customer_name}%",))   # ← changed full_name → customer_name
+        """, (f"%{customer_name}%",))
         row = cur.fetchone()
         cur.close()
         conn.close()
     except Exception as e:
         return {"error": f"Database error: {e}"}
 
-    # 4) Return result or not-found message
+    # 4) Return result or not-found
     if not row:
         return {"message": f"No orders found for {customer_name}"}
 
     return {
         "customer":     customer_name,
         "order_status": row[0],
-        "order_date":   row[1].strftime("%Y-%m-%d %H:%M:%S"),
-        "order_total":  float(row[2]) if row[2] is not None else None
+        "order_date":   row[1].strftime("%Y-%m-%d %H:%M:%S")
     }
