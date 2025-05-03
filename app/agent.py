@@ -18,21 +18,22 @@ PERP_KEY = os.getenv("PERPLEXITY_API_KEY")
 
 # Fallback map from user phrasing → actual DB column
 COLUMN_MAP = {
-    "full name":      "full_name",
-    "address":        "address",
-    "age":            "age",
-    "gender":         "gender",
-    "latitude":       "latitude",
-    "longitude":      "longitude",
-    "email address":  "email_address",
-    "order datetime": "order_datetime",
-    "order status":   "order_status",
-    "order total":    "order_total",
-    "items":          "items",
-    "total sales":    "total_sales",
-    "order count":    "order_count",
-    "rating":         "rating",
-    "average rating": "average_rating"
+    "id":              "id",
+    "full name":       "full_name",
+    "address":         "address",
+    "age":             "age",
+    "gender":          "gender",
+    "latitude":        "latitude",
+    "longitude":       "longitude",
+    "email address":   "email_address",
+    "order datetime":  "order_datetime",
+    "order status":    "order_status",
+    "order total":     "order_total",
+    "items":           "items",
+    "total sales":     "total_sales",
+    "order count":     "order_count",
+    "rating":          "rating",
+    "average rating":  "average_rating"
 }
 
 
@@ -90,15 +91,26 @@ async def process_user_query(user_query: str):
         column       = COLUMN_MAP.get(column_key, None)
         if not column:
             raise KeyError(f"Unknown column '{column_key}'")
-    except Exception:
+    except Exception as e:
         # --- Step 2: Fallback parsing ---
         # a) name via regex
-        m = re.search(r"status of\s+(.+?)\s+order", user_query, re.IGNORECASE)
-        if m:
-            customer_name = m.group(1).strip()
-        else:
-            # last-ditch: take first two words as name
+        name_patterns = [
+            r"(?:status|info|details|data)\s+(?:of|for|about)\s+(.+?)(?:\s+order|\s+'s|\s+$)",
+            r"(?:what|where|when|how|show)\s+(?:is|are)\s+(.+?)(?:'s|\s+$)",
+            r"(?:lookup|find|get)\s+(.+?)(?:\s+information|\s+data|\s+details|\s+$)"
+        ]
+        
+        customer_name = None
+        for pattern in name_patterns:
+            m = re.search(pattern, user_query, re.IGNORECASE)
+            if m:
+                customer_name = m.group(1).strip()
+                break
+        
+        # last-ditch: take first two words as name
+        if not customer_name:
             customer_name = " ".join(user_query.split()[:2])
+        
         # b) field via keyword map
         uq = user_query.lower()
         column = None
@@ -135,7 +147,7 @@ async def process_user_query(user_query: str):
     value = row[0]
     # if datetime, format
     if hasattr(value, "strftime"):
-        value = value.strftime("%Y-%m-%d %H:%M:%S")
+        value = value.strftime("%Y-%m-%dg %H:%M:%S")
 
     return {
         "customer": customer_name,
